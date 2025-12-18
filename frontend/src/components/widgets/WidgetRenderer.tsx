@@ -108,27 +108,27 @@ export function WidgetRenderer({ widget, storageId }: WidgetRendererProps) {
 
 // Stats Widget
 function StatsWidget({ data }: { data?: DashboardData }) {
-  if (!data) return <EmptyState />;
+  if (!data || !data.storage_stats) return <EmptyState />;
 
   const stats = [
     {
       label: "Документов",
-      value: data.storage_stats.total_documents,
+      value: data.storage_stats.total_documents ?? 0,
       color: "blue",
     },
     {
       label: "Размер",
-      value: formatBytes(data.storage_stats.total_size_bytes),
+      value: formatBytes(data.storage_stats.total_size_bytes ?? 0),
       color: "green",
     },
     {
       label: "Просмотров",
-      value: data.storage_stats.total_views,
+      value: data.storage_stats.total_views ?? 0,
       color: "purple",
     },
     {
       label: "Поисков",
-      value: data.storage_stats.total_searches,
+      value: data.storage_stats.total_searches ?? 0,
       color: "orange",
     },
   ];
@@ -295,7 +295,7 @@ function PopularDocsWidget({ data }: { data?: DashboardData }) {
 
 // Recent Activity Widget
 function RecentActivityWidget({ data }: { data?: DashboardData }) {
-  if (!data) return <EmptyState />;
+  if (!data || !data.recent_activity) return <EmptyState />;
 
   const actionLabels: Record<string, string> = {
     document_upload: "Загрузки",
@@ -305,7 +305,10 @@ function RecentActivityWidget({ data }: { data?: DashboardData }) {
     search_perform: "Поиски",
   };
 
-  const actions = Object.entries(data.recent_activity.by_action).slice(0, 4);
+  const actions = Object.entries(data.recent_activity.by_action || {}).slice(
+    0,
+    4
+  );
   if (actions.length === 0) return <EmptyState message="Нет активности" />;
 
   const total = actions.reduce((sum, [, count]) => sum + count, 0);
@@ -369,9 +372,9 @@ function SearchTrendsWidget({
 
 // Storage Usage Widget
 function StorageUsageWidget({ data }: { data?: DashboardData }) {
-  if (!data) return <EmptyState />;
+  if (!data || !data.storage_stats) return <EmptyState />;
 
-  const usedBytes = data.storage_stats.total_size_bytes;
+  const usedBytes = data.storage_stats.total_size_bytes ?? 0;
   const maxBytes = 10 * 1024 * 1024 * 1024; // 10GB limit example
   const percentage = Math.min((usedBytes / maxBytes) * 100, 100);
 
