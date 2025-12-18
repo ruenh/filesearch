@@ -1,0 +1,10 @@
+export { Dashboard } from "./Dashboard";
+export { Documents } from "./Documents";
+export { Favorites } from "./Favorites";
+export { Archive } from "./Archive";
+export { Search } from "./Search";
+export { Chat } from "./Chat";
+export { Settings } from "./Settings";
+export { Users } from "./Users";
+export { Login } from "./Login";
+export { Register } from "./Register";

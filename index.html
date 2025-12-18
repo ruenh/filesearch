@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>File Search RAG</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+      .container {
+        max-width: 1000px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+      }
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+      }
+      .header h1 {
+        font-size: 28px;
+        margin-bottom: 8px;
+      }
+      .header p {
+        opacity: 0.9;
+        font-size: 14px;
+      }
+      .content {
+        padding: 30px;
+      }
+      .section {
+        margin-bottom: 30px;
+      }
+      .section h2 {
+        font-size: 18px;
+        color: #333;
+        margin-bottom: 15px;
+        border-bottom: 2px solid #667eea;
+        padding-bottom: 10px;
+      }
+      .upload-area {
+        border: 2px dashed #667eea;
+        border-radius: 8px;
+        padding: 30px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+        background: #f8f9ff;
+      }
+      .upload-area:hover {
+        background: #f0f2ff;
+        border-color: #764ba2;
+      }
+      .upload-area input {
+        display: none;
+      }
+      .upload-icon {
+        font-size: 40px;
+        margin-bottom: 10px;
+      }
+      .button-group {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.3s;
+      }
+      .btn-primary {
+        background: #667eea;
+        color: white;
+      }
+      .btn-primary:hover {
+        background: #764ba2;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+      }
+      .btn-secondary {
+        background: #e0e0e0;
+        color: #333;
+      }
+      .btn-secondary:hover {
+        background: #d0d0d0;
+      }
+      .search-box {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+      .search-box input {
+        flex: 1;
+        padding: 12px 16px;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        font-size: 14px;
+        transition: border-color 0.3s;
+      }
+      .search-box input:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+      .file-list {
+        background: #f8f9fa;
+        border-radius: 6px;
+        padding: 15px;
+        margin-top: 15px;
+      }
+      .file-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        background: white;
+        border-radius: 4px;
+        margin-bottom: 8px;
+        border-left: 4px solid #667eea;
+      }
+      .file-item span {
+        color: #666;
+        font-size: 13px;
+      }
+      .results {
+        background: #f8f9fa;
+        border-radius: 6px;
+        padding: 20px;
+      }
+      .result-item {
+        background: white;
+        padding: 15px;
+        border-radius: 6px;
+        margin-bottom: 12px;
+        border-left: 4px solid #667eea;
+      }
+      .result-item h4 {
+        color: #667eea;
+        margin-bottom: 5px;
+        font-size: 14px;
+      }
+      .result-item p {
+        color: #666;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      .status {
+        padding: 12px 16px;
+        border-radius: 6px;
+        margin-bottom: 15px;
+        font-size: 14px;
+      }
+      .status.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .status.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      .status.info {
+        background: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+      }
+      .loading {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #667eea;
+        animation: pulse 1.5s infinite;
+        margin-right: 8px;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🔍 File Search RAG</h1>
+        <p>Интеллектуальный поиск и анализ документов с помощью Gemini API</p>
+      </div>
+      <div class="content">
+        <div id="status"></div>
+        <div class="section">
+          <h2>📦 Хранилище</h2>
+          <div class="button-group">
+            <button class="btn-primary" onclick="createStore()">
+              Создать хранилище
+            </button>
+            <button class="btn-primary" onclick="listStores()">
+              Показать хранилища
+            </button>
+          </div>
+          <div id="storeList" class="file-list" style="display: none"></div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+            <div class="section">
+                <h2>📤 Загрузка файлов</h2>
+                <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                    <div class="upload-icon">📎</div>
+                    <p><strong>Нажмите чтобы выбрать файл</strong></p>
+                    <p style="color: #999; font-size: 12px; margin-top: 8px;">PDF, TXT, DOCX поддерживаются</p>
+                    <input type="file" id="fileInput" onchange="handleFileSelect(event)">
+                </div>
+                <div class="file-list" id="fileList" style="display:none;"></div>
+            </div>
+            <div class="section">
+                <h2>🔎 Поиск в документах</h2>
+                <div class="search-box">
+                    <input type="text" id="searchQuery" placeholder="Введите вопрос или ключевые слова...">
+                    <button class="btn-primary" onclick="performSearch()">Поиск</button>
+                </div>
+                <div id="results"></div>
+            </div>
+        </div>
+    </div>
+    <script>
+        let currentStore = null;
+        let uploadedFiles = [];
+
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+            setTimeout(() => statusDiv.innerHTML = '', 5000);
+        }
+
+        async function createStore() {
+            try {
+                const response = await fetch('/api/store/create', { method: 'POST' });
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                currentStore = data.store_id;
+                showStatus(`✅ Хранилище создано: ${currentStore}`, 'success');
+            } catch (e) {
+                showStatus(`❌ Ошибка: ${e.message}`, 'error');
+            }
+        }
+
+        async function listStores() {
+            try {
+                const response = await fetch('/api/store/list');
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                const storeList = document.getElementById('storeList');
+                if (data.stores.length > 0) {
+                    storeList.style.display = 'block';
+                    storeList.innerHTML = data.stores.map(s =>
+                        `<div class="file-item"><span>📦 ${s}</span><button class="btn-secondary" onclick="selectStore('${s}')">Выбрать</button></div>`
+                    ).join('');
+                } else {
+                    showStatus('📭 Хранилищ пока нет', 'info');
+                }
+            } catch (e) {
+                showStatus(`❌ Ошибка: ${e.message}`, 'error');
+            }
+        }
+
+        function selectStore(storeName) {
+            currentStore = storeName;
+            showStatus(`✅ Хранилище выбрано: ${storeName}`, 'success');
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (!currentStore) {
+                showStatus('⚠️ Сначала создайте или выберите хранилище', 'error');
+                return;
+            }
+            uploadFile(file);
+        }
+
+        async function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('store', currentStore);
+            showStatus(`⏳ Загрузка файла: ${file.name}...`, 'info');
+            try {
+                const response = await fetch('/api/file/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                uploadedFiles.push(file.name);
+                updateFileList();
+                showStatus(`✅ Файл загружен: ${file.name}`, 'success');
+            } catch (e) {
+                showStatus(`❌ Ошибка загрузки: ${e.message}`, 'error');
+            }
+        }
+
+        function updateFileList() {
+            const fileList = document.getElementById('fileList');
+            if (uploadedFiles.length > 0) {
+                fileList.style.display = 'block';
+                fileList.innerHTML = uploadedFiles.map(f =>
+                    `<div class="file-item"><span>📄 ${f}</span></div>`
+                ).join('');
+            }
+        }
+
+        async function performSearch() {
+            const query = document.getElementById('searchQuery').value;
+            if (!query) {
+                showStatus('⚠️ Введите поисковый запрос', 'error');
+                return;
+            }
+            if (!currentStore) {
+                showStatus('⚠️ Сначала выберите хранилище', 'error');
+                return;
+            }
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="status info"><span class="loading"></span>Поиск в документах...</div>';
+            try {
+                const response = await fetch('/api/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, store: currentStore })
+                });
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                if (data.results && data.results.length > 0) {
+                    resultsDiv.innerHTML = data.results.map(r => `
+                        <div class="result-item">
+                            <h4>📄 ${r.source}</h4>
+                            <p>${r.snippet}</p>
+                        </div>
+                    `).join('');
+                } else {
+                    resultsDiv.innerHTML = '<div class="status info">Результатов не найдено</div>';
+                }
+            } catch (e) {
+                resultsDiv.innerHTML = `<div class="status error">Ошибка: ${e.message}</div>`;
+            }
+        }
+
+        showStatus('💡 Создайте хранилище и загрузите документы для начала работы', 'info');
+    </script>
+</body>
+</html>
