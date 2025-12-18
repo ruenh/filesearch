@@ -269,7 +269,7 @@ def get_document_analytics(document_id):
         200: Document-specific analytics
         404: Document not found
     """
-    document = Document.query.get(document_id)
+    document = db.session.get(Document, document_id)
     if not document:
         return jsonify({'error': 'Document not found'}), 404
     
@@ -281,8 +281,8 @@ def get_document_analytics(document_id):
     start_date = datetime.utcnow() - timedelta(days=days)
     
     # Get view count
-    total_views = DocumentView.query.filter_by(document_id=document_id).count()
-    recent_views = DocumentView.query.filter(
+    total_views = db.session.query(DocumentView).filter_by(document_id=document_id).count()
+    recent_views = db.session.query(DocumentView).filter(
         DocumentView.document_id == document_id,
         DocumentView.viewed_at >= start_date
     ).count()
@@ -331,7 +331,7 @@ def refresh_storage_stats(storage_id):
         200: Updated storage statistics
         404: Storage not found
     """
-    storage = Storage.query.get(storage_id)
+    storage = db.session.get(Storage, storage_id)
     if not storage:
         return jsonify({'error': 'Storage not found'}), 404
     
@@ -348,12 +348,12 @@ def refresh_storage_stats(storage_id):
 def _get_storage_statistics(storage_id=None):
     """Get storage statistics."""
     if storage_id:
-        storage = Storage.query.get(storage_id)
+        storage = db.session.get(Storage, storage_id)
         if not storage:
             return {}
         
         # Try to get cached stats
-        stats = StorageStats.query.filter_by(storage_id=storage_id).first()
+        stats = db.session.query(StorageStats).filter_by(storage_id=storage_id).first()
         if stats:
             return stats.to_dict()
         
@@ -362,24 +362,24 @@ def _get_storage_statistics(storage_id=None):
             'storage_id': storage_id,
             'total_documents': storage.document_count,
             'total_size_bytes': storage.total_size,
-            'total_views': DocumentView.query.filter_by(storage_id=storage_id).count(),
-            'total_searches': SearchAnalytics.query.filter_by(storage_id=storage_id).count()
+            'total_views': db.session.query(DocumentView).filter_by(storage_id=storage_id).count(),
+            'total_searches': db.session.query(SearchAnalytics).filter_by(storage_id=storage_id).count()
         }
     else:
         # Aggregate across all storages
-        total_docs = Document.query.filter_by(is_deleted=False).count()
+        total_docs = db.session.query(Document).filter_by(is_deleted=False).count()
         total_size = db.session.query(func.sum(Document.size)).filter(
             Document.is_deleted == False
         ).scalar() or 0
-        total_views = DocumentView.query.count()
-        total_searches = SearchAnalytics.query.count()
+        total_views = db.session.query(DocumentView).count()
+        total_searches = db.session.query(SearchAnalytics).count()
         
         return {
             'total_documents': total_docs,
             'total_size_bytes': total_size,
             'total_views': total_views,
             'total_searches': total_searches,
-            'storage_count': Storage.query.count()
+            'storage_count': db.session.query(Storage).count()
         }
 
 
@@ -410,7 +410,7 @@ def _enrich_popular_documents(popular_docs):
     """Enrich popular documents with document details."""
     enriched = []
     for doc_id, view_count in popular_docs:
-        doc = Document.query.get(doc_id)
+        doc = db.session.get(Document, doc_id)
         if doc:
             enriched.append({
                 'document_id': doc_id,
