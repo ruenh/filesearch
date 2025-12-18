@@ -21,19 +21,23 @@ def create_app(config_name=None):
     # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
+    # CORS origins
+    allowed_origins = [
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "https://filesearch.odindindindun.ru"
+    ]
+    
     cors.init_app(app, resources={
         r"/api/*": {
-            "origins": ["http://localhost:5173", "http://localhost:3000"],
+            "origins": allowed_origins,
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"]
         }
     })
     
     # Initialize Socket.IO with CORS support
-    socketio.init_app(app, cors_allowed_origins=[
-        "http://localhost:5173",
-        "http://localhost:3000"
-    ], async_mode='threading')
+    socketio.init_app(app, cors_allowed_origins=allowed_origins, async_mode='eventlet')
     
     # Register WebSocket events
     from backend.websocket import register_socket_events
