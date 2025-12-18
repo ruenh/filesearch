@@ -6,8 +6,10 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { useUserStore } from "../store/useUserStore";
 
-// WebSocket server URL
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
+// WebSocket server URL - use relative path in production
+const SOCKET_URL = import.meta.env.PROD
+  ? window.location.origin
+  : import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
 
 // Types for presence tracking
 export interface DocumentUser {
