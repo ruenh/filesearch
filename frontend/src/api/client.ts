@@ -40,6 +40,14 @@ async function request<T>(
     "Content-Type": "application/json",
   };
 
+  // Add auth token if available
+  const token = localStorage.getItem("access_token");
+  if (token) {
+    (defaultHeaders as Record<string, string>)[
+      "Authorization"
+    ] = `Bearer ${token}`;
+  }
+
   const response = await fetch(url, {
     ...fetchOptions,
     headers: {
