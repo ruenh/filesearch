@@ -46,14 +46,14 @@ def create_folder():
         return jsonify({'error': 'storage_id is required'}), 400
     
     # Verify storage exists
-    storage = Storage.query.get(storage_id)
+    storage = db.session.get(Storage, storage_id)
     if not storage:
         return jsonify({'error': 'Storage not found'}), 404
     
     # Verify parent folder if provided
     parent_id = data.get('parent_id')
     if parent_id:
-        parent_folder = Folder.query.get(parent_id)
+        parent_folder = db.session.get(Folder, parent_id)
         if not parent_folder:
             return jsonify({'error': 'Parent folder not found'}), 404
         if parent_folder.storage_id != storage_id:
@@ -125,7 +125,7 @@ def get_folder(folder_id):
         200: Folder object with details
         404: Folder not found
     """
-    folder = Folder.query.get(folder_id)
+    folder = db.session.get(Folder, folder_id)
     
     if not folder:
         return jsonify({'error': 'Folder not found'}), 404
@@ -153,7 +153,7 @@ def update_folder(folder_id):
     
     Requirements: 22.2
     """
-    folder = Folder.query.get(folder_id)
+    folder = db.session.get(Folder, folder_id)
     
     if not folder:
         return jsonify({'error': 'Folder not found'}), 404
@@ -180,7 +180,7 @@ def update_folder(folder_id):
             folder.parent_id = None
         else:
             # Verify new parent exists and is in the same storage
-            new_parent = Folder.query.get(new_parent_id)
+            new_parent = db.session.get(Folder, new_parent_id)
             if not new_parent:
                 return jsonify({'error': 'Parent folder not found'}), 404
             if new_parent.storage_id != folder.storage_id:
@@ -203,7 +203,7 @@ def update_folder(folder_id):
 
 def _is_descendant(folder_id, potential_ancestor_id):
     """Check if folder_id is a descendant of potential_ancestor_id."""
-    folder = Folder.query.get(folder_id)
+    folder = db.session.get(Folder, folder_id)
     while folder:
         if folder.parent_id == potential_ancestor_id:
             return True
@@ -228,7 +228,7 @@ def delete_folder(folder_id):
     
     Requirements: 22.2
     """
-    folder = Folder.query.get(folder_id)
+    folder = db.session.get(Folder, folder_id)
     
     if not folder:
         return jsonify({'error': 'Folder not found'}), 404
@@ -271,7 +271,7 @@ def get_folder_documents(folder_id):
         200: List of document objects
         404: Folder not found
     """
-    folder = Folder.query.get(folder_id)
+    folder = db.session.get(Folder, folder_id)
     
     if not folder:
         return jsonify({'error': 'Folder not found'}), 404
@@ -301,7 +301,7 @@ def get_folder_breadcrumb(folder_id):
     
     Requirements: 22.3
     """
-    folder = Folder.query.get(folder_id)
+    folder = db.session.get(Folder, folder_id)
     
     if not folder:
         return jsonify({'error': 'Folder not found'}), 404

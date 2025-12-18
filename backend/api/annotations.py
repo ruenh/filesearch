@@ -43,7 +43,7 @@ def create_annotation():
             return jsonify({'error': f'{field} is required'}), 400
     
     # Verify document exists
-    document = Document.query.get(data['document_id'])
+    document = db.session.get(Document, data['document_id'])
     if not document:
         return jsonify({'error': 'Document not found'}), 404
     
@@ -76,7 +76,7 @@ def get_document_annotations(document_id):
     Requirements: 38.3
     """
     # Verify document exists
-    document = Document.query.get(document_id)
+    document = db.session.get(Document, document_id)
     if not document:
         return jsonify({'error': 'Document not found'}), 404
     
@@ -96,7 +96,7 @@ def get_annotation(annotation_id):
         200: Annotation object
         404: Annotation not found
     """
-    annotation = Annotation.query.get(annotation_id)
+    annotation = db.session.get(Annotation, annotation_id)
     if not annotation:
         return jsonify({'error': 'Annotation not found'}), 404
     
@@ -115,7 +115,7 @@ def update_annotation(annotation_id):
         200: Updated annotation object
         404: Annotation not found
     """
-    annotation = Annotation.query.get(annotation_id)
+    annotation = db.session.get(Annotation, annotation_id)
     if not annotation:
         return jsonify({'error': 'Annotation not found'}), 404
     
@@ -141,7 +141,7 @@ def delete_annotation(annotation_id):
         200: Success message
         404: Annotation not found
     """
-    annotation = Annotation.query.get(annotation_id)
+    annotation = db.session.get(Annotation, annotation_id)
     if not annotation:
         return jsonify({'error': 'Annotation not found'}), 404
     

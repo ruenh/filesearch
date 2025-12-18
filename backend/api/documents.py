@@ -171,7 +171,7 @@ def upload_document():
         return jsonify({'error': 'storage_id is required'}), 400
     
     # Verify storage exists
-    storage = Storage.query.get(storage_id)
+    storage = db.session.get(Storage, storage_id)
     if not storage:
         return jsonify({'error': 'Storage not found'}), 404
     
@@ -352,7 +352,7 @@ def get_document(doc_id):
     
     Requirements: 4.1, 4.3
     """
-    document = Document.query.get(doc_id)
+    document = db.session.get(Document, doc_id)
     
     if not document:
         return jsonify({'error': 'Document not found'}), 404
@@ -378,7 +378,7 @@ def update_document(doc_id):
     
     Requirements: 5.1
     """
-    document = Document.query.get(doc_id)
+    document = db.session.get(Document, doc_id)
     
     if not document:
         return jsonify({'error': 'Document not found'}), 404
@@ -419,7 +419,7 @@ def delete_document(doc_id):
     
     Requirements: 3.4, 25.1
     """
-    document = Document.query.get(doc_id)
+    document = db.session.get(Document, doc_id)
     
     if not document:
         return jsonify({'error': 'Document not found'}), 404
@@ -454,7 +454,7 @@ def restore_document(doc_id):
     
     Requirements: 25.3
     """
-    document = Document.query.get(doc_id)
+    document = db.session.get(Document, doc_id)
     
     if not document:
         return jsonify({'error': 'Document not found'}), 404
@@ -492,7 +492,7 @@ def list_versions(doc_id):
     
     Requirements: 26.2
     """
-    document = Document.query.get(doc_id)
+    document = db.session.get(Document, doc_id)
     
     if not document:
         return jsonify({'error': 'Document not found'}), 404
@@ -521,7 +521,7 @@ def create_version(doc_id):
     
     Requirements: 5.2, 26.1
     """
-    document = Document.query.get(doc_id)
+    document = db.session.get(Document, doc_id)
     
     if not document:
         return jsonify({'error': 'Document not found'}), 404
@@ -648,7 +648,7 @@ def get_version(doc_id, version_id):
     
     Requirements: 26.3
     """
-    document = Document.query.get(doc_id)
+    document = db.session.get(Document, doc_id)
     
     if not document:
         return jsonify({'error': 'Document not found'}), 404
@@ -691,7 +691,7 @@ def get_document_content(doc_id):
     from flask import send_file
     import mimetypes
     
-    document = Document.query.get(doc_id)
+    document = db.session.get(Document, doc_id)
     
     if not document:
         return jsonify({'error': 'Document not found'}), 404
@@ -756,7 +756,7 @@ def download_document(doc_id):
     from flask import send_file
     import mimetypes
     
-    document = Document.query.get(doc_id)
+    document = db.session.get(Document, doc_id)
     
     if not document:
         return jsonify({'error': 'Document not found'}), 404
@@ -798,7 +798,7 @@ def update_document_content(doc_id):
     
     Requirements: 34.3, 5.2
     """
-    document = Document.query.get(doc_id)
+    document = db.session.get(Document, doc_id)
     
     if not document:
         return jsonify({'error': 'Document not found'}), 404
@@ -904,7 +904,7 @@ def get_document_tags(doc_id):
     
     Requirements: 23.2
     """
-    document = Document.query.get(doc_id)
+    document = db.session.get(Document, doc_id)
     
     if not document:
         return jsonify({'error': 'Document not found'}), 404
@@ -931,7 +931,7 @@ def update_document_tags(doc_id):
     """
     from backend.models.tag import Tag
     
-    document = Document.query.get(doc_id)
+    document = db.session.get(Document, doc_id)
     
     if not document:
         return jsonify({'error': 'Document not found'}), 404
@@ -988,7 +988,7 @@ def add_document_tag(doc_id, tag_name):
     """
     from backend.models.tag import Tag
     
-    document = Document.query.get(doc_id)
+    document = db.session.get(Document, doc_id)
     
     if not document:
         return jsonify({'error': 'Document not found'}), 404
@@ -1031,7 +1031,7 @@ def remove_document_tag(doc_id, tag_name):
     """
     from backend.models.tag import Tag
     
-    document = Document.query.get(doc_id)
+    document = db.session.get(Document, doc_id)
     
     if not document:
         return jsonify({'error': 'Document not found'}), 404
@@ -1069,7 +1069,7 @@ def toggle_favorite(doc_id):
     
     Requirements: 24.1, 24.3
     """
-    document = Document.query.get(doc_id)
+    document = db.session.get(Document, doc_id)
     
     if not document:
         return jsonify({'error': 'Document not found'}), 404
@@ -1159,7 +1159,7 @@ def toggle_archive(doc_id):
     
     Requirements: 30.1, 30.3
     """
-    document = Document.query.get(doc_id)
+    document = db.session.get(Document, doc_id)
     
     if not document:
         return jsonify({'error': 'Document not found'}), 404
@@ -1262,7 +1262,7 @@ def bulk_delete():
     now = datetime.utcnow()
     
     for doc_id in document_ids:
-        document = Document.query.get(doc_id)
+        document = db.session.get(Document, doc_id)
         if document and not document.is_deleted:
             document.is_deleted = True
             document.deleted_at = now
@@ -1316,14 +1316,14 @@ def bulk_move():
     # Verify folder exists if specified
     if folder_id:
         from backend.models.folder import Folder
-        folder = Folder.query.get(folder_id)
+        folder = db.session.get(Folder, folder_id)
         if not folder:
             return jsonify({'error': 'Target folder not found'}), 404
     
     moved_count = 0
     
     for doc_id in document_ids:
-        document = Document.query.get(doc_id)
+        document = db.session.get(Document, doc_id)
         if document and not document.is_deleted:
             document.folder_id = folder_id
             moved_count += 1
@@ -1381,7 +1381,7 @@ def bulk_tag():
     tagged_count = 0
     
     for doc_id in document_ids:
-        document = Document.query.get(doc_id)
+        document = db.session.get(Document, doc_id)
         if document and not document.is_deleted:
             # Clear existing tags if replacing
             if action == 'replace':
@@ -1451,7 +1451,7 @@ def bulk_archive():
     archived_count = 0
     
     for doc_id in document_ids:
-        document = Document.query.get(doc_id)
+        document = db.session.get(Document, doc_id)
         if document and not document.is_deleted:
             document.is_archived = bool(is_archived)
             archived_count += 1
@@ -1498,7 +1498,7 @@ def bulk_favorite():
     updated_count = 0
     
     for doc_id in document_ids:
-        document = Document.query.get(doc_id)
+        document = db.session.get(Document, doc_id)
         if document and not document.is_deleted:
             document.is_favorite = bool(is_favorite)
             updated_count += 1
@@ -1533,7 +1533,7 @@ def get_document_ocr(doc_id):
     
     Requirements: 10.2
     """
-    document = Document.query.get(doc_id)
+    document = db.session.get(Document, doc_id)
     
     if not document:
         return jsonify({'error': 'Document not found'}), 404
@@ -1570,7 +1570,7 @@ def process_document_ocr_endpoint(doc_id):
     
     Requirements: 10.1, 10.2
     """
-    document = Document.query.get(doc_id)
+    document = db.session.get(Document, doc_id)
     
     if not document:
         return jsonify({'error': 'Document not found'}), 404
@@ -1632,7 +1632,7 @@ def bulk_process_ocr():
     success_count = 0
     
     for doc_id in document_ids:
-        document = Document.query.get(doc_id)
+        document = db.session.get(Document, doc_id)
         
         if not document:
             results.append({

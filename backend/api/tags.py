@@ -43,7 +43,7 @@ def create_tag():
         return jsonify({'error': 'storage_id is required'}), 400
     
     # Verify storage exists
-    storage = Storage.query.get(storage_id)
+    storage = db.session.get(Storage, storage_id)
     if not storage:
         return jsonify({'error': 'Storage not found'}), 404
     
@@ -111,7 +111,7 @@ def get_tag(tag_id):
     
     Requirements: 23.2
     """
-    tag = Tag.query.get(tag_id)
+    tag = db.session.get(Tag, tag_id)
     
     if not tag:
         return jsonify({'error': 'Tag not found'}), 404
@@ -137,7 +137,7 @@ def update_tag(tag_id):
     
     Requirements: 23.1
     """
-    tag = Tag.query.get(tag_id)
+    tag = db.session.get(Tag, tag_id)
     
     if not tag:
         return jsonify({'error': 'Tag not found'}), 404
@@ -188,7 +188,7 @@ def delete_tag(tag_id):
     
     Requirements: 23.1
     """
-    tag = Tag.query.get(tag_id)
+    tag = db.session.get(Tag, tag_id)
     
     if not tag:
         return jsonify({'error': 'Tag not found'}), 404

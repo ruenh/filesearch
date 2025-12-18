@@ -134,7 +134,7 @@ def process_document_ocr(document_id: str) -> bool:
     from backend.models.document import Document
     
     try:
-        document = Document.query.get(document_id)
+        document = db.session.get(Document, document_id)
         if not document:
             current_app.logger.error(f'OCR: Document not found: {document_id}')
             return False

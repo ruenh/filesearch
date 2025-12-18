@@ -37,7 +37,7 @@ def create_share_link():
         return jsonify({'error': 'document_id is required'}), 400
     
     # Verify document exists and is not deleted
-    document = Document.query.get(document_id)
+    document = db.session.get(Document, document_id)
     if not document:
         return jsonify({'error': 'Document not found'}), 404
     
@@ -241,7 +241,7 @@ def delete_share_link(share_id):
     
     Requirements: 51.1
     """
-    share_link = ShareLink.query.get(share_id)
+    share_link = db.session.get(ShareLink, share_id)
     
     if not share_link:
         return jsonify({'error': 'Share link not found'}), 404
@@ -266,7 +266,7 @@ def list_document_share_links(doc_id):
         200: List of share link objects
         404: Document not found
     """
-    document = Document.query.get(doc_id)
+    document = db.session.get(Document, doc_id)
     
     if not document:
         return jsonify({'error': 'Document not found'}), 404
@@ -300,7 +300,7 @@ def update_share_link(share_id):
         200: Updated share link object
         404: Share link not found
     """
-    share_link = ShareLink.query.get(share_id)
+    share_link = db.session.get(ShareLink, share_id)
     
     if not share_link:
         return jsonify({'error': 'Share link not found'}), 404

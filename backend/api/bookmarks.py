@@ -41,7 +41,7 @@ def create_bookmark():
         if field not in data:
             return jsonify({'error': f'{field} is required'}), 400
     
-    document = Document.query.get(data['document_id'])
+    document = db.session.get(Document, data['document_id'])
     if not document:
         return jsonify({'error': 'Document not found'}), 404
     
@@ -71,7 +71,7 @@ def get_document_bookmarks(document_id):
     
     Requirements: 39.2
     """
-    document = Document.query.get(document_id)
+    document = db.session.get(Document, document_id)
     if not document:
         return jsonify({'error': 'Document not found'}), 404
     
@@ -91,7 +91,7 @@ def get_bookmark(bookmark_id):
         200: Bookmark object
         404: Bookmark not found
     """
-    bookmark = Bookmark.query.get(bookmark_id)
+    bookmark = db.session.get(Bookmark, bookmark_id)
     if not bookmark:
         return jsonify({'error': 'Bookmark not found'}), 404
     
@@ -111,7 +111,7 @@ def update_bookmark(bookmark_id):
         200: Updated bookmark object
         404: Bookmark not found
     """
-    bookmark = Bookmark.query.get(bookmark_id)
+    bookmark = db.session.get(Bookmark, bookmark_id)
     if not bookmark:
         return jsonify({'error': 'Bookmark not found'}), 404
     
@@ -139,7 +139,7 @@ def delete_bookmark(bookmark_id):
         200: Success message
         404: Bookmark not found
     """
-    bookmark = Bookmark.query.get(bookmark_id)
+    bookmark = db.session.get(Bookmark, bookmark_id)
     if not bookmark:
         return jsonify({'error': 'Bookmark not found'}), 404
     

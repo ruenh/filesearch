@@ -131,7 +131,7 @@ def search_with_gemini(query: str, storage_id: str) -> list:
         genai.configure(api_key=api_key)
         
         # Get storage to check for Gemini store ID
-        storage = Storage.query.get(storage_id)
+        storage = db.session.get(Storage, storage_id)
         if not storage:
             return []
         
@@ -386,7 +386,7 @@ def search():
         return jsonify({'error': 'storage_id is required'}), 400
     
     # Verify storage exists
-    storage = Storage.query.get(storage_id)
+    storage = db.session.get(Storage, storage_id)
     if not storage:
         return jsonify({'error': 'Storage not found'}), 404
     
@@ -512,7 +512,7 @@ def get_search_history():
     
     if storage_id:
         # Verify storage exists
-        storage = Storage.query.get(storage_id)
+        storage = db.session.get(Storage, storage_id)
         if not storage:
             return jsonify({'error': 'Storage not found'}), 404
         query = query.filter(SearchHistory.storage_id == storage_id)
@@ -544,7 +544,7 @@ def delete_search_history(history_id):
     
     Requirements: 14.2
     """
-    history_item = SearchHistory.query.get(history_id)
+    history_item = db.session.get(SearchHistory, history_id)
     if not history_item:
         return jsonify({'error': 'Search history entry not found'}), 404
     
@@ -616,7 +616,7 @@ def save_search():
         return jsonify({'error': 'storage_id is required'}), 400
     
     # Verify storage exists
-    storage = Storage.query.get(storage_id)
+    storage = db.session.get(Storage, storage_id)
     if not storage:
         return jsonify({'error': 'Storage not found'}), 404
     
@@ -654,7 +654,7 @@ def get_saved_searches():
     
     if storage_id:
         # Verify storage exists
-        storage = Storage.query.get(storage_id)
+        storage = db.session.get(Storage, storage_id)
         if not storage:
             return jsonify({'error': 'Storage not found'}), 404
         query = query.filter(SavedSearch.storage_id == storage_id)
@@ -680,7 +680,7 @@ def get_saved_search(saved_id):
     
     Requirements: 16.2
     """
-    saved_search = SavedSearch.query.get(saved_id)
+    saved_search = db.session.get(SavedSearch, saved_id)
     if not saved_search:
         return jsonify({'error': 'Saved search not found'}), 404
     
@@ -705,7 +705,7 @@ def update_saved_search(saved_id):
     
     Requirements: 16.2
     """
-    saved_search = SavedSearch.query.get(saved_id)
+    saved_search = db.session.get(SavedSearch, saved_id)
     if not saved_search:
         return jsonify({'error': 'Saved search not found'}), 404
     
@@ -736,7 +736,7 @@ def delete_saved_search(saved_id):
     
     Requirements: 16.2
     """
-    saved_search = SavedSearch.query.get(saved_id)
+    saved_search = db.session.get(SavedSearch, saved_id)
     if not saved_search:
         return jsonify({'error': 'Saved search not found'}), 404
     

@@ -128,7 +128,7 @@ def get_user_activity(user_id):
     
     Requirements: 53.2
     """
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({'error': 'User not found'}), 404
     

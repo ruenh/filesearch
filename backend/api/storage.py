@@ -97,7 +97,7 @@ def get_storage(storage_id):
     
     Requirements: 2.3
     """
-    storage = Storage.query.get(storage_id)
+    storage = db.session.get(Storage, storage_id)
     
     if not storage:
         return jsonify({'error': 'Storage not found'}), 404
@@ -120,7 +120,7 @@ def delete_storage(storage_id):
     Note: Cascade delete is configured in the Storage model,
           so all associated documents and folders will be deleted.
     """
-    storage = Storage.query.get(storage_id)
+    storage = db.session.get(Storage, storage_id)
     
     if not storage:
         return jsonify({'error': 'Storage not found'}), 404
@@ -148,7 +148,7 @@ def export_storage(storage_id):
     
     Requirements: 33.1, 33.2, 33.3
     """
-    storage = Storage.query.get(storage_id)
+    storage = db.session.get(Storage, storage_id)
     
     if not storage:
         return jsonify({'error': 'Storage not found'}), 404

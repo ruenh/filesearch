@@ -247,7 +247,7 @@ def chat():
         return jsonify({'error': 'storage_id is required'}), 400
     
     # Verify storage exists
-    storage = Storage.query.get(storage_id)
+    storage = db.session.get(Storage, storage_id)
     if not storage:
         return jsonify({'error': 'Storage not found'}), 404
     
@@ -257,7 +257,7 @@ def chat():
     
     # Get or create chat session
     if session_id:
-        session = ChatSession.query.get(session_id)
+        session = db.session.get(ChatSession, session_id)
         if not session:
             return jsonify({'error': 'Chat session not found'}), 404
         if session.storage_id != storage_id:
@@ -332,7 +332,7 @@ def get_chat_sessions():
         return jsonify({'error': 'storage_id is required'}), 400
     
     # Verify storage exists
-    storage = Storage.query.get(storage_id)
+    storage = db.session.get(Storage, storage_id)
     if not storage:
         return jsonify({'error': 'Storage not found'}), 404
     
@@ -367,7 +367,7 @@ def get_chat_session(session_id):
     
     Requirements: 20.4
     """
-    session = ChatSession.query.get(session_id)
+    session = db.session.get(ChatSession, session_id)
     if not session:
         return jsonify({'error': 'Chat session not found'}), 404
     
@@ -387,7 +387,7 @@ def delete_chat_session(session_id):
     
     Requirements: 20.4
     """
-    session = ChatSession.query.get(session_id)
+    session = db.session.get(ChatSession, session_id)
     if not session:
         return jsonify({'error': 'Chat session not found'}), 404
     
@@ -414,7 +414,7 @@ def update_chat_session_title(session_id):
     
     Requirements: 20.4
     """
-    session = ChatSession.query.get(session_id)
+    session = db.session.get(ChatSession, session_id)
     if not session:
         return jsonify({'error': 'Chat session not found'}), 404
     
@@ -457,7 +457,7 @@ def summarize():
         length = 'medium'
     
     # Get document
-    document = Document.query.get(document_id)
+    document = db.session.get(Document, document_id)
     if not document:
         return jsonify({'error': 'Document not found'}), 404
     
@@ -545,7 +545,7 @@ def translate():
         return jsonify({'error': 'target_language is required'}), 400
     
     # Get document
-    document = Document.query.get(document_id)
+    document = db.session.get(Document, document_id)
     if not document:
         return jsonify({'error': 'Document not found'}), 404
     
@@ -625,8 +625,8 @@ def compare():
         return jsonify({'error': 'document_id_1 and document_id_2 are required'}), 400
     
     # Get documents
-    doc1 = Document.query.get(doc_id_1)
-    doc2 = Document.query.get(doc_id_2)
+    doc1 = db.session.get(Document, doc_id_1)
+    doc2 = db.session.get(Document, doc_id_2)
     
     if not doc1:
         return jsonify({'error': f'Document {doc_id_1} not found'}), 404
@@ -721,7 +721,7 @@ def generate_tags():
     max_tags = min(int(data.get('max_tags', 5)), 10)
     
     # Get document
-    document = Document.query.get(document_id)
+    document = db.session.get(Document, document_id)
     if not document:
         return jsonify({'error': 'Document not found'}), 404
     
@@ -803,7 +803,7 @@ def find_similar():
     limit = min(int(data.get('limit', 5)), 20)
     
     # Get source document
-    source_doc = Document.query.get(document_id)
+    source_doc = db.session.get(Document, document_id)
     if not source_doc:
         return jsonify({'error': 'Document not found'}), 404
     

@@ -270,7 +270,8 @@ def register_socket_events(socketio_instance):
         
         try:
             # Get document from database
-            document = Document.query.get(document_id)
+            from backend.extensions import db
+            document = db.session.get(Document, document_id)
             if not document:
                 emit('error', {'message': 'Document not found'})
                 return

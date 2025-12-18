@@ -46,7 +46,7 @@ def create_comment():
         return jsonify({'error': 'content is required and cannot be empty'}), 400
     
     # Verify document exists and is not deleted
-    document = Document.query.get(document_id)
+    document = db.session.get(Document, document_id)
     if not document:
         return jsonify({'error': 'Document not found'}), 404
     
@@ -54,14 +54,14 @@ def create_comment():
         return jsonify({'error': 'Cannot comment on a deleted document'}), 400
     
     # Verify user exists
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({'error': 'User not found'}), 404
     
     # Verify parent comment if provided (for threaded replies)
     parent_id = data.get('parent_id')
     if parent_id:
-        parent_comment = Comment.query.get(parent_id)
+        parent_comment = db.session.get(Comment, parent_id)
         if not parent_comment:
             return jsonify({'error': 'Parent comment not found'}), 404
         if parent_comment.document_id != document_id:
@@ -97,7 +97,7 @@ def get_document_comments(doc_id):
     
     Requirements: 52.2
     """
-    document = Document.query.get(doc_id)
+    document = db.session.get(Document, doc_id)
     if not document:
         return jsonify({'error': 'Document not found'}), 404
     
@@ -131,7 +131,7 @@ def get_comment(comment_id):
         200: Comment object
         404: Comment not found
     """
-    comment = Comment.query.get(comment_id)
+    comment = db.session.get(Comment, comment_id)
     if not comment:
         return jsonify({'error': 'Comment not found'}), 404
     
@@ -155,7 +155,7 @@ def update_comment(comment_id):
     
     Requirements: 52.1
     """
-    comment = Comment.query.get(comment_id)
+    comment = db.session.get(Comment, comment_id)
     if not comment:
         return jsonify({'error': 'Comment not found'}), 404
     
@@ -184,7 +184,7 @@ def delete_comment(comment_id):
     
     Requirements: 52.1
     """
-    comment = Comment.query.get(comment_id)
+    comment = db.session.get(Comment, comment_id)
     if not comment:
         return jsonify({'error': 'Comment not found'}), 404
     

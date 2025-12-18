@@ -106,7 +106,7 @@ def track_search_click(search_analytics_id, document_id):
         search_analytics_id: The ID of the SearchAnalytics record
         document_id: The ID of the document clicked
     """
-    analytics = SearchAnalytics.query.get(search_analytics_id)
+    analytics = db.session.get(SearchAnalytics, search_analytics_id)
     if analytics:
         analytics.clicked_result_id = document_id
         db.session.commit()
