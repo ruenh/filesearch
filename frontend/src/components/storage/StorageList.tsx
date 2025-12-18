@@ -3,6 +3,7 @@
  * Displays list of storages with metadata and selection handling
  * Requirements: 2.2, 2.3
  */
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAppStore } from "@/store";
 import { listStorages, deleteStorage, exportStorage } from "@/api/storage";
@@ -29,9 +30,11 @@ export function StorageList({ onCreateClick }: StorageListProps) {
   });
 
   // Update global store when storages change
-  if (storages.length > 0) {
-    setStorages(storages);
-  }
+  useEffect(() => {
+    if (storages.length > 0) {
+      setStorages(storages);
+    }
+  }, [storages, setStorages]);
 
   // Delete mutation
   const deleteMutation = useMutation({
