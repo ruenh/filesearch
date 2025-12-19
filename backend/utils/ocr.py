@@ -77,7 +77,7 @@ def extract_text_from_image(file_path: str) -> str:
         mime_type = get_image_mime_type(file_path)
         
         # Create the model
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.0-flash-exp')
         
         # Create image part for the API
         image_part = {
