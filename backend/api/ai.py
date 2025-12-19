@@ -29,7 +29,7 @@ def get_gemini_model():
             return None
         
         genai.configure(api_key=api_key)
-        return genai.GenerativeModel('gemini-2.5-flash-preview-05-20')
+        return genai.GenerativeModel('gemini-2.5-flash')
     except Exception as e:
         current_app.logger.error(f"Failed to initialize Gemini model: {e}")
         return None
