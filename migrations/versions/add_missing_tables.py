@@ -148,9 +148,85 @@ def upgrade():
         sa.Column('expires_at', sa.DateTime, nullable=True),
         sa.Column('created_at', sa.DateTime, nullable=False),
     )
+    
+    # Chat sessions table
+    op.create_table('chat_sessions',
+        sa.Column('id', sa.String(36), primary_key=True),
+        sa.Column('storage_id', sa.String(36), sa.ForeignKey('storages.id'), nullable=False, index=True),
+        sa.Column('user_id', sa.String(36), sa.ForeignKey('users.id'), nullable=True, index=True),
+        sa.Column('title', sa.String(255), nullable=True),
+        sa.Column('created_at', sa.DateTime, nullable=False),
+        sa.Column('updated_at', sa.DateTime),
+    )
+    
+    # Chat messages table
+    op.create_table('chat_messages',
+        sa.Column('id', sa.String(36), primary_key=True),
+        sa.Column('session_id', sa.String(36), sa.ForeignKey('chat_sessions.id'), nullable=False, index=True),
+        sa.Column('role', sa.String(20), nullable=False),
+        sa.Column('content', sa.Text, nullable=False),
+        sa.Column('sources', sa.JSON, nullable=True),
+        sa.Column('created_at', sa.DateTime, nullable=False),
+    )
+    
+    # Share links table
+    op.create_table('share_links',
+        sa.Column('id', sa.String(36), primary_key=True),
+        sa.Column('document_id', sa.String(36), sa.ForeignKey('documents.id'), nullable=False, index=True),
+        sa.Column('token', sa.String(64), unique=True, nullable=False, index=True),
+        sa.Column('password_hash', sa.String(255), nullable=True),
+        sa.Column('expires_at', sa.DateTime, nullable=True),
+        sa.Column('access_count', sa.Integer, default=0),
+        sa.Column('last_accessed_at', sa.DateTime, nullable=True),
+        sa.Column('created_by', sa.String(36), sa.ForeignKey('users.id'), nullable=True),
+        sa.Column('is_active', sa.Boolean, default=True),
+        sa.Column('created_at', sa.DateTime, nullable=False),
+        sa.Column('updated_at', sa.DateTime),
+    )
+    
+    # Search history table
+    op.create_table('search_history',
+        sa.Column('id', sa.String(36), primary_key=True),
+        sa.Column('search_query', sa.String(500), nullable=False, index=True),
+        sa.Column('storage_id', sa.String(36), sa.ForeignKey('storages.id'), nullable=False, index=True),
+        sa.Column('user_id', sa.String(36), sa.ForeignKey('users.id'), nullable=True, index=True),
+        sa.Column('result_count', sa.Integer, default=0),
+        sa.Column('filters', sa.JSON, default=dict),
+        sa.Column('created_at', sa.DateTime, nullable=False, index=True),
+    )
+    
+    # Saved searches table
+    op.create_table('saved_searches',
+        sa.Column('id', sa.String(36), primary_key=True),
+        sa.Column('name', sa.String(255), nullable=False),
+        sa.Column('search_query', sa.String(500), nullable=False),
+        sa.Column('storage_id', sa.String(36), sa.ForeignKey('storages.id'), nullable=False, index=True),
+        sa.Column('user_id', sa.String(36), sa.ForeignKey('users.id'), nullable=True, index=True),
+        sa.Column('filters', sa.JSON, default=dict),
+        sa.Column('created_at', sa.DateTime, nullable=False),
+        sa.Column('updated_at', sa.DateTime),
+    )
+    
+    # API key usage table
+    op.create_table('api_key_usage',
+        sa.Column('id', sa.String(36), primary_key=True),
+        sa.Column('api_key_id', sa.String(36), sa.ForeignKey('api_keys.id'), nullable=False, index=True),
+        sa.Column('endpoint', sa.String(255), nullable=False),
+        sa.Column('method', sa.String(10), nullable=False),
+        sa.Column('status_code', sa.Integer, nullable=True),
+        sa.Column('response_time_ms', sa.Integer, nullable=True),
+        sa.Column('ip_address', sa.String(45), nullable=True),
+        sa.Column('timestamp', sa.DateTime, nullable=False, index=True),
+    )
 
 
 def downgrade():
+    op.drop_table('api_key_usage')
+    op.drop_table('saved_searches')
+    op.drop_table('search_history')
+    op.drop_table('share_links')
+    op.drop_table('chat_messages')
+    op.drop_table('chat_sessions')
     op.drop_table('shares')
     op.drop_table('comments')
     op.drop_table('api_keys')
