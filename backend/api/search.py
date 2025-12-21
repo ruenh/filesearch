@@ -111,7 +111,7 @@ def extract_snippet(content: str, query: str, max_length: int = 200) -> str:
 
 
 def search_with_gemini(query: str, storage_id: str) -> list:
-    """Perform semantic search using OpenRouter API.
+    """Perform semantic search using Gemini API.
     
     Args:
         query: Search query string
@@ -121,20 +121,22 @@ def search_with_gemini(query: str, storage_id: str) -> list:
         List of search results with document IDs and relevance scores
     """
     try:
-        import requests
+        import google.generativeai as genai
         import json
         
-        api_key = os.environ.get('OPENROUTER_API_KEY')
+        api_key = os.environ.get('GEMINI_API_KEY')
         if not api_key:
-            current_app.logger.warning('OpenRouter API key not configured')
+            current_app.logger.warning('Gemini API key not configured')
             return []
         
-        # Get storage to check for Gemini store ID
+        genai.configure(api_key=api_key)
+        
+        # Get storage
         storage = db.session.get(Storage, storage_id)
         if not storage:
             return []
         
-        # Get all documents with content in this storage
+        # Get all documents in this storage
         documents = Document.query.filter(
             Document.storage_id == storage_id,
             Document.is_deleted == False
@@ -190,29 +192,10 @@ Return only valid JSON array, no other text. Example format:
 [{{"document_id": "uuid-here", "relevance_score": 85}}]
 """
         
-        # Call OpenRouter API
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://filesearch.odindindindun.ru",
-            "X-Title": "File Search RAG"
-        }
-        
-        data = {
-            "model": "google/gemini-2.0-flash-exp:free",
-            "messages": [{"role": "user", "content": prompt}]
-        }
-        
-        response = requests.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers=headers,
-            json=data,
-            timeout=60
-        )
-        response.raise_for_status()
-        
-        result = response.json()
-        response_text = result["choices"][0]["message"]["content"].strip()
+        # Call Gemini API
+        model = genai.GenerativeModel('gemini-2.0-flash')
+        response = model.generate_content(prompt)
+        response_text = response.text.strip()
         
         # Parse response
         try:
@@ -224,11 +207,11 @@ Return only valid JSON array, no other text. Example format:
             results = json.loads(response_text)
             return results
         except json.JSONDecodeError:
-            current_app.logger.error(f"Failed to parse OpenRouter response: {response_text}")
+            current_app.logger.error(f"Failed to parse Gemini response: {response_text}")
             return []
         
     except Exception as e:
-        current_app.logger.error(f"OpenRouter search error: {str(e)}")
+        current_app.logger.error(f"Gemini search error: {str(e)}")
         return []
 
 

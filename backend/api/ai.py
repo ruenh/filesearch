@@ -4,8 +4,8 @@ Implements RAG chat, summarization, translation, comparison, and auto-tagging.
 Requirements: 7.1, 7.2, 7.3, 17.1, 17.2, 17.3, 18.1, 18.2, 18.3, 19.1, 19.2, 20.1, 20.2, 20.4, 21.1, 21.2, 21.3
 """
 import os
-import requests
 from flask import Blueprint, jsonify, request, current_app
+import google.generativeai as genai
 
 from backend.extensions import db
 from backend.models.document import Document
@@ -14,60 +14,45 @@ from backend.models.chat import ChatSession, ChatMessage
 
 ai_bp = Blueprint('ai', __name__)
 
-# OpenRouter configuration
-OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
-OPENROUTER_MODEL = "google/gemini-2.0-flash-exp:free"
+# Gemini model name
+GEMINI_MODEL = "gemini-2.0-flash"
 
 
-def call_openrouter(prompt: str, system_prompt: str = None) -> str:
-    """Call OpenRouter API with the given prompt.
+def get_gemini_model():
+    """Get configured Gemini model instance.
+    
+    Returns:
+        GenerativeModel instance or None if not configured
+    """
+    api_key = os.environ.get('GEMINI_API_KEY')
+    if not api_key:
+        current_app.logger.warning('GEMINI_API_KEY not configured')
+        return None
+    
+    genai.configure(api_key=api_key)
+    return genai.GenerativeModel(GEMINI_MODEL)
+
+
+def call_gemini(prompt: str, system_prompt: str = None) -> str:
+    """Call Gemini API with the given prompt.
     
     Args:
         prompt: User prompt/message
-        system_prompt: Optional system prompt
+        system_prompt: Optional system instruction
     
     Returns:
         Response text from the model
     """
-    api_key = os.environ.get('OPENROUTER_API_KEY')
-    if not api_key:
-        raise ValueError("OPENROUTER_API_KEY not configured")
+    model = get_gemini_model()
+    if not model:
+        raise ValueError("GEMINI_API_KEY not configured")
     
-    messages = []
+    full_prompt = prompt
     if system_prompt:
-        messages.append({"role": "system", "content": system_prompt})
-    messages.append({"role": "user", "content": prompt})
+        full_prompt = f"{system_prompt}\n\n{prompt}"
     
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://filesearch.odindindindun.ru",
-        "X-Title": "File Search RAG"
-    }
-    
-    data = {
-        "model": OPENROUTER_MODEL,
-        "messages": messages
-    }
-    
-    response = requests.post(OPENROUTER_API_URL, headers=headers, json=data, timeout=60)
-    response.raise_for_status()
-    
-    result = response.json()
-    return result["choices"][0]["message"]["content"]
-
-
-def get_gemini_model():
-    """Legacy function - now uses OpenRouter.
-    
-    Returns:
-        True if OpenRouter is configured, None otherwise
-    """
-    api_key = os.environ.get('OPENROUTER_API_KEY')
-    if not api_key:
-        current_app.logger.warning('OPENROUTER_API_KEY not configured')
-        return None
-    return True
+    response = model.generate_content(full_prompt)
+    return response.text
 
 
 def retrieve_context_from_storage(storage_id: str, query: str, max_docs: int = 5) -> list:
@@ -219,7 +204,7 @@ If you reference information from a specific document, mention its name.
 If the documents don't contain enough information to answer the question, acknowledge this."""
 
     try:
-        response_text = call_openrouter(prompt, system_prompt)
+        response_text = call_gemini(prompt, system_prompt)
         
         # Extract sources from contexts that were likely used
         sources = []
@@ -534,7 +519,7 @@ Document Content:
 Summary:"""
 
     try:
-        summary = call_openrouter(prompt)
+        summary = call_gemini(prompt)
         
         return jsonify({
             'document_id': document_id,
@@ -613,7 +598,7 @@ Original text:
 Translation:"""
 
     try:
-        translation = call_openrouter(prompt)
+        translation = call_gemini(prompt)
         
         return jsonify({
             'document_id': document_id,
@@ -703,7 +688,7 @@ Please provide:
 Analysis:"""
 
     try:
-        analysis = call_openrouter(prompt)
+        analysis = call_gemini(prompt)
         
         return jsonify({
             'document_1': {
@@ -785,7 +770,7 @@ Document Content:
 Tags:"""
 
     try:
-        tags_text = call_openrouter(prompt).strip()
+        tags_text = call_gemini(prompt).strip()
         
         # Parse tags from response
         tags = [tag.strip().lower() for tag in tags_text.split(',')]
@@ -929,7 +914,7 @@ Return only valid JSON array, no other text. Example format:
 
     try:
         import json
-        response_text = call_openrouter(prompt).strip()
+        response_text = call_gemini(prompt).strip()
         
         # Handle markdown code blocks
         if response_text.startswith('```'):
