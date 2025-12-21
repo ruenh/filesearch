@@ -9,7 +9,7 @@ import google.generativeai as genai
 from flask import current_app
 
 # Gemini model for vision
-GEMINI_VISION_MODEL = "gemini-2.5-flash"
+GEMINI_VISION_MODEL = "gemini-2.0-flash"
 
 
 def get_image_mime_type(file_path: str) -> str:
