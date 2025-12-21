@@ -15,7 +15,7 @@ from backend.models.chat import ChatSession, ChatMessage
 ai_bp = Blueprint('ai', __name__)
 
 # Gemini model name
-GEMINI_MODEL = "gemini-2.0-flash"
+GEMINI_MODEL = "gemini-2.5-flash"
 
 
 def get_gemini_model():
