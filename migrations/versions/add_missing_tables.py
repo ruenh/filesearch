@@ -14,6 +14,18 @@ depends_on = None
 
 
 def upgrade():
+    # Activity logs table
+    op.create_table('activity_logs',
+        sa.Column('id', sa.String(36), primary_key=True),
+        sa.Column('user_id', sa.String(36), sa.ForeignKey('users.id'), nullable=True, index=True),
+        sa.Column('action', sa.String(100), nullable=False, index=True),
+        sa.Column('resource_type', sa.String(50), nullable=False, index=True),
+        sa.Column('resource_id', sa.String(36), nullable=True, index=True),
+        sa.Column('resource_name', sa.String(255), nullable=True),
+        sa.Column('details', sa.JSON, default=dict),
+        sa.Column('timestamp', sa.DateTime, nullable=False, index=True),
+    )
+    
     # Notifications table
     op.create_table('notifications',
         sa.Column('id', sa.String(36), primary_key=True),
@@ -148,3 +160,4 @@ def downgrade():
     op.drop_table('search_analytics')
     op.drop_table('document_views')
     op.drop_table('notifications')
+    op.drop_table('activity_logs')
