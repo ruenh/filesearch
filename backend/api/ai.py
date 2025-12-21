@@ -22,14 +22,24 @@ def get_gemini_model():
     """
     try:
         import google.generativeai as genai
+        import httpx
         
-        api_key = current_app.config.get('GEMINI_API_KEY')
+        api_key = current_app.config.get('GEMINI_API_KEY') or os.environ.get('GEMINI_API_KEY')
         if not api_key:
             current_app.logger.warning('Gemini API key not configured')
             return None
         
-        genai.configure(api_key=api_key)
-        return genai.GenerativeModel('gemini-2.5-flash')
+        # Check for proxy configuration
+        proxy_url = os.environ.get('GEMINI_PROXY_URL')
+        if proxy_url:
+            # Use httpx with proxy for requests
+            transport = httpx.HTTPTransport(proxy=proxy_url)
+            client = httpx.Client(transport=transport)
+            genai.configure(api_key=api_key, transport='rest', client_options={'api_endpoint': 'https://generativelanguage.googleapis.com'})
+        else:
+            genai.configure(api_key=api_key)
+        
+        return genai.GenerativeModel('gemini-2.0-flash')
     except Exception as e:
         current_app.logger.error(f"Failed to initialize Gemini model: {e}")
         return None

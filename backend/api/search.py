@@ -147,7 +147,7 @@ def search_with_gemini(query: str, storage_id: str) -> list:
         
         # Use Gemini to generate embeddings and find relevant documents
         # For now, we'll use a simple approach with the generative model
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-2.0-flash')
         
         # Build context from documents
         doc_contexts = []
