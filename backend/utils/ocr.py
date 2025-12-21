@@ -1,11 +1,16 @@
 """OCR utility for extracting text from images.
 
-Uses Gemini Vision API to extract text from images.
+Uses OpenRouter API with vision-capable models to extract text from images.
 Requirements: 10.1, 10.2, 10.3
 """
 import os
 import base64
+import requests
 from flask import current_app
+
+# OpenRouter configuration
+OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+OPENROUTER_VISION_MODEL = "google/gemini-2.0-flash-exp:free"
 
 
 def get_image_mime_type(file_path: str) -> str:
@@ -42,9 +47,9 @@ def is_image_file(file_type: str) -> bool:
 
 
 def extract_text_from_image(file_path: str) -> str:
-    """Extract text from an image using Gemini Vision API.
+    """Extract text from an image using OpenRouter Vision API.
     
-    Uses Gemini's multimodal capabilities to perform OCR on images.
+    Uses OpenRouter's multimodal capabilities to perform OCR on images.
     
     Args:
         file_path: Full path to the image file
@@ -55,14 +60,10 @@ def extract_text_from_image(file_path: str) -> str:
     Requirements: 10.1
     """
     try:
-        import google.generativeai as genai
-        
-        api_key = current_app.config.get('GEMINI_API_KEY')
+        api_key = os.environ.get('OPENROUTER_API_KEY')
         if not api_key:
-            current_app.logger.warning('Gemini API key not configured for OCR')
+            current_app.logger.warning('OpenRouter API key not configured for OCR')
             return ""
-        
-        genai.configure(api_key=api_key)
         
         # Check if file exists
         if not os.path.exists(file_path):
@@ -75,15 +76,7 @@ def extract_text_from_image(file_path: str) -> str:
         
         # Get MIME type
         mime_type = get_image_mime_type(file_path)
-        
-        # Create the model
-        model = genai.GenerativeModel('gemini-2.0-flash')
-        
-        # Create image part for the API
-        image_part = {
-            'mime_type': mime_type,
-            'data': base64.b64encode(image_data).decode('utf-8')
-        }
+        base64_image = base64.b64encode(image_data).decode('utf-8')
         
         # OCR prompt
         prompt = """Extract all text from this image. 
@@ -92,10 +85,37 @@ If the image contains no readable text, return an empty string.
 Preserve the original formatting and structure of the text as much as possible.
 Do not add any explanations or descriptions - only return the extracted text."""
 
-        # Generate content with the image
-        response = model.generate_content([prompt, image_part])
+        # Build request for OpenRouter with vision
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://filesearch.odindindindun.ru",
+            "X-Title": "File Search RAG OCR"
+        }
         
-        extracted_text = response.text.strip()
+        data = {
+            "model": OPENROUTER_VISION_MODEL,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:{mime_type};base64,{base64_image}"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+        
+        response = requests.post(OPENROUTER_API_URL, headers=headers, json=data, timeout=60)
+        response.raise_for_status()
+        
+        result = response.json()
+        extracted_text = result["choices"][0]["message"]["content"].strip()
         
         # Filter out common "no text" responses
         no_text_indicators = [

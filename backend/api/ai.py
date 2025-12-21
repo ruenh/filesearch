@@ -4,6 +4,7 @@ Implements RAG chat, summarization, translation, comparison, and auto-tagging.
 Requirements: 7.1, 7.2, 7.3, 17.1, 17.2, 17.3, 18.1, 18.2, 18.3, 19.1, 19.2, 20.1, 20.2, 20.4, 21.1, 21.2, 21.3
 """
 import os
+import requests
 from flask import Blueprint, jsonify, request, current_app
 
 from backend.extensions import db
@@ -13,36 +14,60 @@ from backend.models.chat import ChatSession, ChatMessage
 
 ai_bp = Blueprint('ai', __name__)
 
+# OpenRouter configuration
+OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+OPENROUTER_MODEL = "google/gemini-2.0-flash-exp:free"
 
-def get_gemini_model():
-    """Get configured Gemini model instance.
+
+def call_openrouter(prompt: str, system_prompt: str = None) -> str:
+    """Call OpenRouter API with the given prompt.
+    
+    Args:
+        prompt: User prompt/message
+        system_prompt: Optional system prompt
     
     Returns:
-        Configured GenerativeModel or None if API key not set
+        Response text from the model
     """
-    try:
-        import google.generativeai as genai
-        import httpx
-        
-        api_key = current_app.config.get('GEMINI_API_KEY') or os.environ.get('GEMINI_API_KEY')
-        if not api_key:
-            current_app.logger.warning('Gemini API key not configured')
-            return None
-        
-        # Check for proxy configuration
-        proxy_url = os.environ.get('GEMINI_PROXY_URL')
-        if proxy_url:
-            # Use httpx with proxy for requests
-            transport = httpx.HTTPTransport(proxy=proxy_url)
-            client = httpx.Client(transport=transport)
-            genai.configure(api_key=api_key, transport='rest', client_options={'api_endpoint': 'https://generativelanguage.googleapis.com'})
-        else:
-            genai.configure(api_key=api_key)
-        
-        return genai.GenerativeModel('gemini-2.0-flash')
-    except Exception as e:
-        current_app.logger.error(f"Failed to initialize Gemini model: {e}")
+    api_key = os.environ.get('OPENROUTER_API_KEY')
+    if not api_key:
+        raise ValueError("OPENROUTER_API_KEY not configured")
+    
+    messages = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.append({"role": "user", "content": prompt})
+    
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://filesearch.odindindindun.ru",
+        "X-Title": "File Search RAG"
+    }
+    
+    data = {
+        "model": OPENROUTER_MODEL,
+        "messages": messages
+    }
+    
+    response = requests.post(OPENROUTER_API_URL, headers=headers, json=data, timeout=60)
+    response.raise_for_status()
+    
+    result = response.json()
+    return result["choices"][0]["message"]["content"]
+
+
+def get_gemini_model():
+    """Legacy function - now uses OpenRouter.
+    
+    Returns:
+        True if OpenRouter is configured, None otherwise
+    """
+    api_key = os.environ.get('OPENROUTER_API_KEY')
+    if not api_key:
+        current_app.logger.warning('OPENROUTER_API_KEY not configured')
         return None
+    return True
 
 
 def retrieve_context_from_storage(storage_id: str, query: str, max_docs: int = 5) -> list:
@@ -134,7 +159,7 @@ def build_chat_history_context(session: ChatSession, max_messages: int = 10) -> 
 
 
 def generate_rag_response(query: str, contexts: list, chat_history: list = None) -> dict:
-    """Generate AI response using RAG with Gemini.
+    """Generate AI response using RAG with OpenRouter.
     
     Args:
         query: User question
@@ -146,8 +171,7 @@ def generate_rag_response(query: str, contexts: list, chat_history: list = None)
     
     Requirements: 7.2, 7.3, 20.2
     """
-    model = get_gemini_model()
-    if not model:
+    if not get_gemini_model():
         return {
             'content': 'AI service is not available. Please check API configuration.',
             'sources': []
@@ -177,12 +201,12 @@ def generate_rag_response(query: str, contexts: list, chat_history: list = None)
         history_str = "\n".join(history_parts)
     
     # Create the RAG prompt
-    prompt = f"""You are a helpful AI assistant that answers questions based on the provided document context.
+    system_prompt = """You are a helpful AI assistant that answers questions based on the provided document context.
 Use the information from the documents to answer the user's question accurately.
 If the documents don't contain relevant information, say so clearly.
-Always cite which document(s) you used to form your answer.
+Always cite which document(s) you used to form your answer."""
 
-{"Previous conversation:" if history_str else ""}
+    prompt = f"""{"Previous conversation:" if history_str else ""}
 {history_str}
 
 Document Context:
@@ -195,14 +219,13 @@ If you reference information from a specific document, mention its name.
 If the documents don't contain enough information to answer the question, acknowledge this."""
 
     try:
-        response = model.generate_content(prompt)
-        response_text = response.text
+        response_text = call_openrouter(prompt, system_prompt)
         
         # Extract sources from contexts that were likely used
         sources = []
         for ctx in contexts:
             # Check if document name or content keywords appear in response
-            if ctx['name'].lower() in response_text.lower() or ctx['score'] > 30:
+            if ctx['name'].lower() in response_text.lower() or ctx.get('score', 0) > 30:
                 sources.append({
                     'documentId': ctx['id'],
                     'documentName': ctx['name']
@@ -491,8 +514,7 @@ def summarize():
         return jsonify({'error': 'Document is empty'}), 400
     
     # Get Gemini model
-    model = get_gemini_model()
-    if not model:
+    if not get_gemini_model():
         return jsonify({'error': 'AI service not available'}), 503
     
     # Define length parameters
@@ -512,8 +534,7 @@ Document Content:
 Summary:"""
 
     try:
-        response = model.generate_content(prompt)
-        summary = response.text
+        summary = call_openrouter(prompt)
         
         return jsonify({
             'document_id': document_id,
@@ -578,9 +599,8 @@ def translate():
     if not content.strip():
         return jsonify({'error': 'Document is empty'}), 400
     
-    # Get Gemini model
-    model = get_gemini_model()
-    if not model:
+    # Check AI service availability
+    if not get_gemini_model():
         return jsonify({'error': 'AI service not available'}), 503
     
     prompt = f"""Translate the following text to {target_language}.
@@ -593,8 +613,7 @@ Original text:
 Translation:"""
 
     try:
-        response = model.generate_content(prompt)
-        translation = response.text
+        translation = call_openrouter(prompt)
         
         return jsonify({
             'document_id': document_id,
@@ -661,9 +680,8 @@ def compare():
             current_app.logger.error(f"Error reading document {doc.id}: {e}")
             return jsonify({'error': f'Failed to read document {doc.name}'}), 500
     
-    # Get Gemini model
-    model = get_gemini_model()
-    if not model:
+    # Check AI service availability
+    if not get_gemini_model():
         return jsonify({'error': 'AI service not available'}), 503
     
     prompt = f"""Compare the following two documents and provide a detailed analysis of their differences and similarities.
@@ -685,8 +703,7 @@ Please provide:
 Analysis:"""
 
     try:
-        response = model.generate_content(prompt)
-        analysis = response.text
+        analysis = call_openrouter(prompt)
         
         return jsonify({
             'document_1': {
@@ -753,9 +770,8 @@ def generate_tags():
     if not content.strip():
         content = document.name
     
-    # Get Gemini model
-    model = get_gemini_model()
-    if not model:
+    # Check AI service availability
+    if not get_gemini_model():
         return jsonify({'error': 'AI service not available'}), 503
     
     prompt = f"""Analyze the following document and suggest {max_tags} relevant tags for categorization.
@@ -769,8 +785,7 @@ Document Content:
 Tags:"""
 
     try:
-        response = model.generate_content(prompt)
-        tags_text = response.text.strip()
+        tags_text = call_openrouter(prompt).strip()
         
         # Parse tags from response
         tags = [tag.strip().lower() for tag in tags_text.split(',')]
@@ -869,9 +884,8 @@ def find_similar():
             'similar_documents': []
         }), 200
     
-    # Get Gemini model
-    model = get_gemini_model()
-    if not model:
+    # Check AI service availability
+    if not get_gemini_model():
         # Fallback to simple keyword matching
         similar = []
         source_words = set(source_content.lower().split())
@@ -915,8 +929,7 @@ Return only valid JSON array, no other text. Example format:
 
     try:
         import json
-        response = model.generate_content(prompt)
-        response_text = response.text.strip()
+        response_text = call_openrouter(prompt).strip()
         
         # Handle markdown code blocks
         if response_text.startswith('```'):
