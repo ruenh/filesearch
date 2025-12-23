@@ -203,6 +203,10 @@ async function loadHistory() {
  * Requirements: 4.3
  */
 async function showHistoryDetails(id) {
+  // Show modal immediately with loading state
+  modalBody.innerHTML = '<p class="loading-message">Загрузка...</p>';
+  historyModal.hidden = false;
+
   try {
     const response = await fetch(`/api/history/${id}`);
     if (!response.ok) {
@@ -234,10 +238,9 @@ async function showHistoryDetails(id) {
                 <p>${item.responseTime}ms</p>
             </div>
         `;
-
-    historyModal.hidden = false;
   } catch (err) {
-    alert("Не удалось загрузить детали запроса");
+    modalBody.innerHTML =
+      '<p class="error-message">Не удалось загрузить детали запроса</p>';
   }
 }
 

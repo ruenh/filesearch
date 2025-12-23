@@ -270,6 +270,20 @@ button:disabled {
   padding: 20px;
 }
 
+/* Loading message */
+.loading-message {
+  color: #666;
+  text-align: center;
+  padding: 40px 20px;
+}
+
+/* Error message in modal */
+.error-message {
+  color: #dc2626;
+  text-align: center;
+  padding: 20px;
+}
+
 /* Modal */
 .modal {
   position: fixed;
