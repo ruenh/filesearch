@@ -1,20 +1,23 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const Groq = require("groq-sdk");
 const { logRequest, logResponse, logError } = require("./logger");
 
 /**
- * Gemini API Client wrapper
+ * Groq API Client wrapper
  * Provides functions for validating prompts and making API calls
  * with proper error handling and timing measurement
  */
 
+// Rate limiting
+const DAILY_LIMIT = 14400;
+let requestCount = 0;
+let lastResetTime = Date.now();
+
 /**
  * Validate a prompt string
- * Requirements: 1.2
  * @param {string} prompt - The prompt to validate
  * @returns {Object} Validation result with isValid and error properties
  */
 function validatePrompt(prompt) {
-  // Check if prompt is null, undefined, or not a string
   if (prompt === null || prompt === undefined || typeof prompt !== "string") {
     return {
       isValid: false,
@@ -22,7 +25,6 @@ function validatePrompt(prompt) {
     };
   }
 
-  // Check if prompt is empty or contains only whitespace
   if (prompt.trim().length === 0) {
     return {
       isValid: false,
@@ -50,11 +52,11 @@ function mapApiError(error) {
     errorMessage.includes("API key") ||
     errorMessage.includes("401") ||
     errorMessage.includes("Unauthorized") ||
-    errorMessage.includes("INVALID_ARGUMENT")
+    errorMessage.includes("authentication")
   ) {
     return {
       code: "401",
-      message: "Неверный API ключ. Проверьте настройки GEMINI_API_KEY",
+      message: "Неверный API ключ. Проверьте настройки GROQ_API_KEY",
     };
   }
 
@@ -62,8 +64,7 @@ function mapApiError(error) {
   if (
     errorMessage.includes("429") ||
     errorMessage.includes("Rate limit") ||
-    errorMessage.includes("quota") ||
-    errorMessage.includes("RESOURCE_EXHAUSTED")
+    errorMessage.includes("rate_limit")
   ) {
     return {
       code: "429",
@@ -75,11 +76,11 @@ function mapApiError(error) {
   if (
     errorMessage.includes("500") ||
     errorMessage.includes("Internal") ||
-    errorMessage.includes("INTERNAL")
+    errorMessage.includes("server_error")
   ) {
     return {
       code: "500",
-      message: "Ошибка сервера Gemini API. Попробуйте позже",
+      message: "Ошибка сервера Groq API. Попробуйте позже",
     };
   }
 
@@ -106,14 +107,46 @@ function mapApiError(error) {
 }
 
 /**
- * Send a request to Gemini API and measure response time
- * Requirements: 1.1, 1.3, 2.3
+ * Check and reset daily limit if needed
+ */
+function checkDailyLimit() {
+  const now = Date.now();
+  const timeSinceReset = now - lastResetTime;
+
+  // Reset counter after 24 hours
+  if (timeSinceReset >= 86400000) {
+    requestCount = 0;
+    lastResetTime = now;
+  }
+
+  if (requestCount >= DAILY_LIMIT) {
+    const minutesLeft = Math.ceil((86400000 - timeSinceReset) / 1000 / 60);
+    return {
+      allowed: false,
+      error: `Дневной лимит исчерпан (${DAILY_LIMIT} запросов). Сброс через ${minutesLeft} минут`,
+    };
+  }
+
+  return { allowed: true };
+}
+
+/**
+ * Get current rate limit status
+ */
+function getRateLimitStatus() {
+  return {
+    requestCount,
+    dailyLimit: DAILY_LIMIT,
+    remaining: DAILY_LIMIT - requestCount,
+    resetTime: new Date(lastResetTime + 86400000).toISOString(),
+  };
+}
+
+/**
+ * Send a request to Groq API and measure response time
  * @param {Object} request - Request object
  * @param {string} request.prompt - The prompt text
  * @param {Object} [requestMeta] - Optional request metadata for logging
- * @param {Object} [requestMeta.headers] - Request headers
- * @param {string} [requestMeta.clientIp] - Client IP address
- * @param {string} [requestMeta.userAgent] - User agent string
  * @returns {Promise<Object>} Response object with success, response/error, and responseTime
  */
 async function checkGemini(request, requestMeta = {}) {
@@ -132,6 +165,19 @@ async function checkGemini(request, requestMeta = {}) {
     };
   }
 
+  // Check daily limit
+  const limitCheck = checkDailyLimit();
+  if (!limitCheck.allowed) {
+    return {
+      success: false,
+      error: {
+        code: "RATE_LIMIT",
+        message: limitCheck.error,
+      },
+      responseTime: Date.now() - startTime,
+    };
+  }
+
   // Log the incoming request
   logRequest({
     prompt: request.prompt,
@@ -141,11 +187,11 @@ async function checkGemini(request, requestMeta = {}) {
   });
 
   // Check for API key
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     const error = {
       code: "CONFIG_ERROR",
-      message: "API ключ не настроен. Установите GEMINI_API_KEY",
+      message: "API ключ не настроен. Установите GROQ_API_KEY",
     };
 
     logError({
@@ -162,16 +208,25 @@ async function checkGemini(request, requestMeta = {}) {
   }
 
   try {
-    // Initialize Gemini client
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    // Initialize Groq client
+    const groq = new Groq({ apiKey });
 
     // Make the API call
-    const result = await model.generateContent(request.prompt);
-    const response = await result.response;
-    const text = response.text();
+    const response = await groq.chat.completions.create({
+      messages: [{ role: "user", content: request.prompt }],
+      model: "mixtral-8x7b-32768",
+      max_tokens: 1024,
+      temperature: 0.7,
+    });
 
+    const text = response.choices[0].message.content;
     const responseTime = Date.now() - startTime;
+
+    // Increment request counter
+    requestCount++;
+    console.log(
+      `Groq request successful. Count: ${requestCount}/${DAILY_LIMIT}`
+    );
 
     // Log successful response
     logResponse({
@@ -184,6 +239,7 @@ async function checkGemini(request, requestMeta = {}) {
       success: true,
       response: text,
       responseTime,
+      rateLimit: getRateLimitStatus(),
     };
   } catch (error) {
     const responseTime = Date.now() - startTime;
@@ -215,4 +271,5 @@ module.exports = {
   validatePrompt,
   checkGemini,
   mapApiError,
+  getRateLimitStatus,
 };
