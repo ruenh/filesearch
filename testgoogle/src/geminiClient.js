@@ -214,7 +214,7 @@ async function checkGemini(request, requestMeta = {}) {
     // Make the API call
     const response = await groq.chat.completions.create({
       messages: [{ role: "user", content: request.prompt }],
-      model: "mixtral-8x7b-32768",
+      model: "llama-3.3-70b-versatile",
       max_tokens: 1024,
       temperature: 0.7,
     });
