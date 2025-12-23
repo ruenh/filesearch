@@ -205,7 +205,7 @@ async function loadHistory() {
 async function showHistoryDetails(id) {
   // Show modal immediately with loading state
   modalBody.innerHTML = '<p class="loading-message">Загрузка...</p>';
-  historyModal.hidden = false;
+  historyModal.classList.add("open");
 
   try {
     const response = await fetch(`/api/history/${id}`);
@@ -248,7 +248,7 @@ async function showHistoryDetails(id) {
  * Close modal
  */
 function closeModal() {
-  historyModal.hidden = true;
+  historyModal.classList.remove("open");
 }
 
 /**
@@ -305,7 +305,7 @@ refreshLogsBtn.addEventListener("click", loadLogs);
 
 // Close modal on Escape key
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && !historyModal.hidden) {
+  if (e.key === "Escape" && historyModal.classList.contains("open")) {
     closeModal();
   }
 });
