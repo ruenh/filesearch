@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gemini API Checker</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Gemini API Checker</h1>
+        <p class="subtitle">Тестирование работоспособности Gemini API</p>
+      </header>
+
+      <main>
+        <!-- Форма ввода промпта -->
+        <section class="prompt-section">
+          <form id="promptForm">
+            <div class="input-group">
+              <label for="promptInput">Введите промпт:</label>
+              <textarea
+                id="promptInput"
+                name="prompt"
+                placeholder="Напишите ваш запрос к Gemini API..."
+                rows="4"
+              ></textarea>
+            </div>
+            <button type="submit" id="submitBtn">
+              <span class="btn-text">Отправить</span>
+              <span class="btn-loader" hidden>⏳</span>
+            </button>
+          </form>
+        </section>
+
+        <!-- Область результата -->
+        <section class="result-section" id="resultSection" hidden>
+          <h2>Результат</h2>
+          <div id="resultContent" class="result-content"></div>
+          <div id="resultMeta" class="result-meta"></div>
+        </section>
+
+        <!-- Ошибка -->
+        <section class="error-section" id="errorSection" hidden>
+          <div id="errorContent" class="error-content"></div>
+        </section>
+
+        <!-- История запросов -->
+        <section class="history-section">
+          <h2>История запросов</h2>
+          <div id="historyList" class="history-list">
+            <p class="empty-message">История пуста</p>
+          </div>
+        </section>
+
+        <!-- Логи -->
+        <section class="logs-section">
+          <h2>Логи</h2>
+          <div class="logs-filter">
+            <label for="logLevelFilter">Фильтр по уровню:</label>
+            <select id="logLevelFilter">
+              <option value="">Все</option>
+              <option value="info">Info</option>
+              <option value="warn">Warning</option>
+              <option value="error">Error</option>
+              <option value="debug">Debug</option>
+            </select>
+            <button type="button" id="refreshLogsBtn">Обновить</button>
+          </div>
+          <div id="logsList" class="logs-list">
+            <p class="empty-message">Логи пусты</p>
+          </div>
+        </section>
+      </main>
+
+      <!-- Модальное окно для деталей истории -->
+      <div id="historyModal" class="modal" hidden>
+        <div class="modal-content">
+          <button class="modal-close" id="modalClose">&times;</button>
+          <h3>Детали запроса</h3>
+          <div id="modalBody"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
