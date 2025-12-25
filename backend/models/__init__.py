@@ -16,6 +16,7 @@ from backend.models.annotation import Annotation
 from backend.models.bookmark import Bookmark
 from backend.models.api_key import APIKey, APIKeyUsage
 from backend.models.webhook import Webhook, WebhookDelivery
+from backend.models.prompt import CustomPrompt
 
 __all__ = [
     'Storage',
@@ -41,5 +42,6 @@ __all__ = [
     'APIKey',
     'APIKeyUsage',
     'Webhook',
-    'WebhookDelivery'
+    'WebhookDelivery',
+    'CustomPrompt'
 ]

@@ -3,6 +3,7 @@ import {
   APIKeyManager,
   WebhookManager,
   LayoutSettings,
+  PromptSettings,
 } from "../components/settings";
 import { OfflineSettings } from "../components/pwa";
 import { ShortcutsSettings } from "../components/shortcuts";
@@ -11,6 +12,7 @@ import { useOnboardingStore } from "../store/useOnboardingStore";
 type SettingsTab =
   | "general"
   | "layout"
+  | "prompts"
   | "shortcuts"
   | "offline"
   | "api-keys"
@@ -24,6 +26,7 @@ export function Settings() {
   const tabs: { id: SettingsTab; label: string }[] = [
     { id: "general", label: "Общие" },
     { id: "layout", label: "Макет" },
+    { id: "prompts", label: "AI Промпты" },
     { id: "shortcuts", label: "Горячие клавиши" },
     { id: "offline", label: "Офлайн режим" },
     { id: "api-keys", label: "API ключи" },
@@ -109,6 +112,8 @@ export function Settings() {
       )}
 
       {activeTab === "layout" && <LayoutSettings />}
+
+      {activeTab === "prompts" && <PromptSettings />}
 
       {activeTab === "shortcuts" && <ShortcutsSettings />}
 

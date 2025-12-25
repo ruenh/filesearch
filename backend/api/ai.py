@@ -11,6 +11,7 @@ from backend.extensions import db
 from backend.models.document import Document
 from backend.models.storage import Storage
 from backend.models.chat import ChatSession, ChatMessage
+from backend.models.prompt import CustomPrompt
 
 ai_bp = Blueprint('ai', __name__)
 
@@ -143,13 +144,14 @@ def build_chat_history_context(session: ChatSession, max_messages: int = 10) -> 
     return [{'role': msg.role, 'content': msg.content} for msg in messages]
 
 
-def generate_rag_response(query: str, contexts: list, chat_history: list = None) -> dict:
+def generate_rag_response(query: str, contexts: list, chat_history: list = None, user_id: str = None) -> dict:
     """Generate AI response using RAG with OpenRouter.
     
     Args:
         query: User question
         contexts: List of document contexts
         chat_history: Optional list of previous messages for multi-turn
+        user_id: Optional user ID for custom prompts
     
     Returns:
         Dict with 'content' (response text) and 'sources' (document references)
@@ -185,11 +187,11 @@ def generate_rag_response(query: str, contexts: list, chat_history: list = None)
             history_parts.append(f"{role_label}: {msg['content']}")
         history_str = "\n".join(history_parts)
     
-    # Create the RAG prompt
-    system_prompt = """You are a helpful AI assistant that answers questions based on the provided document context.
-Use the information from the documents to answer the user's question accurately.
-If the documents don't contain relevant information, say so clearly.
-Always cite which document(s) you used to form your answer."""
+    # Get custom or default system prompt
+    if user_id:
+        system_prompt = CustomPrompt.get_active_prompt(user_id, 'chat')
+    else:
+        system_prompt = CustomPrompt.DEFAULT_PROMPTS['chat']
 
     prompt = f"""{"Previous conversation:" if history_str else ""}
 {history_str}
@@ -301,8 +303,13 @@ def chat():
     # Retrieve relevant context from documents (Requirement 7.1)
     contexts = retrieve_context_from_storage(storage_id, message)
     
+    # Get user_id for custom prompts (optional)
+    user_id = None
+    if hasattr(request, 'current_user') and request.current_user:
+        user_id = request.current_user.get('user_id')
+    
     # Generate AI response (Requirements 7.2, 7.3, 20.2)
-    response_data = generate_rag_response(message, contexts, chat_history)
+    response_data = generate_rag_response(message, contexts, chat_history, user_id)
     
     # Save assistant message
     assistant_message = ChatMessage(

@@ -76,6 +76,7 @@ def register_blueprints(app):
     from backend.api.docs import docs_bp
     from backend.api.webhooks import webhooks_bp
     from backend.api.cloud_import import cloud_import_bp
+    from backend.api.prompts import prompts_bp
     
     app.register_blueprint(storage_bp, url_prefix='/api/storage')
     app.register_blueprint(documents_bp, url_prefix='/api/documents')
@@ -96,11 +97,12 @@ def register_blueprints(app):
     app.register_blueprint(docs_bp, url_prefix='/api/docs')
     app.register_blueprint(webhooks_bp, url_prefix='/api/webhooks')
     app.register_blueprint(cloud_import_bp, url_prefix='/api/cloud')
+    app.register_blueprint(prompts_bp, url_prefix='/api/prompts')
 
 
 def register_models():
     """Import models to ensure they are registered with SQLAlchemy."""
-    from backend.models import Storage, Document, Version, Folder, Tag, User, SearchHistory, SavedSearch, ChatSession, ChatMessage, ShareLink, Comment, ActivityLog, Notification, DocumentView, SearchAnalytics, StorageStats, Annotation, Bookmark, APIKey, APIKeyUsage, Webhook, WebhookDelivery  # noqa: F401
+    from backend.models import Storage, Document, Version, Folder, Tag, User, SearchHistory, SavedSearch, ChatSession, ChatMessage, ShareLink, Comment, ActivityLog, Notification, DocumentView, SearchAnalytics, StorageStats, Annotation, Bookmark, APIKey, APIKeyUsage, Webhook, WebhookDelivery, CustomPrompt  # noqa: F401
 
 
 def register_error_handlers(app):
