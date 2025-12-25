@@ -1,16 +1,11 @@
-const Groq = require("groq-sdk");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { logRequest, logResponse, logError } = require("./logger");
 
 /**
- * Groq API Client wrapper
+ * Google Gemini API Client wrapper
  * Provides functions for validating prompts and making API calls
  * with proper error handling and timing measurement
  */
-
-// Rate limiting
-const DAILY_LIMIT = 14400;
-let requestCount = 0;
-let lastResetTime = Date.now();
 
 /**
  * Validate a prompt string
@@ -52,11 +47,12 @@ function mapApiError(error) {
     errorMessage.includes("API key") ||
     errorMessage.includes("401") ||
     errorMessage.includes("Unauthorized") ||
-    errorMessage.includes("authentication")
+    errorMessage.includes("authentication") ||
+    errorMessage.includes("API_KEY_INVALID")
   ) {
     return {
       code: "401",
-      message: "Неверный API ключ. Проверьте настройки GROQ_API_KEY",
+      message: "Неверный API ключ. Проверьте настройки GEMINI_API_KEY",
     };
   }
 
@@ -64,11 +60,24 @@ function mapApiError(error) {
   if (
     errorMessage.includes("429") ||
     errorMessage.includes("Rate limit") ||
-    errorMessage.includes("rate_limit")
+    errorMessage.includes("rate_limit") ||
+    errorMessage.includes("RESOURCE_EXHAUSTED")
   ) {
     return {
       code: "429",
       message: "Превышен лимит запросов. Подождите некоторое время",
+    };
+  }
+
+  // Check for location/region errors
+  if (
+    errorMessage.includes("location") ||
+    errorMessage.includes("not supported") ||
+    errorMessage.includes("region")
+  ) {
+    return {
+      code: "403",
+      message: "Регион не поддерживается для данного API",
     };
   }
 
@@ -80,7 +89,7 @@ function mapApiError(error) {
   ) {
     return {
       code: "500",
-      message: "Ошибка сервера Groq API. Попробуйте позже",
+      message: "Ошибка сервера Gemini API. Попробуйте позже",
     };
   }
 
@@ -107,43 +116,7 @@ function mapApiError(error) {
 }
 
 /**
- * Check and reset daily limit if needed
- */
-function checkDailyLimit() {
-  const now = Date.now();
-  const timeSinceReset = now - lastResetTime;
-
-  // Reset counter after 24 hours
-  if (timeSinceReset >= 86400000) {
-    requestCount = 0;
-    lastResetTime = now;
-  }
-
-  if (requestCount >= DAILY_LIMIT) {
-    const minutesLeft = Math.ceil((86400000 - timeSinceReset) / 1000 / 60);
-    return {
-      allowed: false,
-      error: `Дневной лимит исчерпан (${DAILY_LIMIT} запросов). Сброс через ${minutesLeft} минут`,
-    };
-  }
-
-  return { allowed: true };
-}
-
-/**
- * Get current rate limit status
- */
-function getRateLimitStatus() {
-  return {
-    requestCount,
-    dailyLimit: DAILY_LIMIT,
-    remaining: DAILY_LIMIT - requestCount,
-    resetTime: new Date(lastResetTime + 86400000).toISOString(),
-  };
-}
-
-/**
- * Send a request to Groq API and measure response time
+ * Send a request to Gemini API and measure response time
  * @param {Object} request - Request object
  * @param {string} request.prompt - The prompt text
  * @param {Object} [requestMeta] - Optional request metadata for logging
@@ -165,19 +138,6 @@ async function checkGemini(request, requestMeta = {}) {
     };
   }
 
-  // Check daily limit
-  const limitCheck = checkDailyLimit();
-  if (!limitCheck.allowed) {
-    return {
-      success: false,
-      error: {
-        code: "RATE_LIMIT",
-        message: limitCheck.error,
-      },
-      responseTime: Date.now() - startTime,
-    };
-  }
-
   // Log the incoming request
   logRequest({
     prompt: request.prompt,
@@ -187,11 +147,11 @@ async function checkGemini(request, requestMeta = {}) {
   });
 
   // Check for API key
-  const apiKey = process.env.GROQ_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     const error = {
       code: "CONFIG_ERROR",
-      message: "API ключ не настроен. Установите GROQ_API_KEY",
+      message: "API ключ не настроен. Установите GEMINI_API_KEY",
     };
 
     logError({
@@ -208,25 +168,17 @@ async function checkGemini(request, requestMeta = {}) {
   }
 
   try {
-    // Initialize Groq client
-    const groq = new Groq({ apiKey });
+    // Initialize Gemini client
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     // Make the API call
-    const response = await groq.chat.completions.create({
-      messages: [{ role: "user", content: request.prompt }],
-      model: "llama-3.3-70b-versatile",
-      max_tokens: 1024,
-      temperature: 0.7,
-    });
-
-    const text = response.choices[0].message.content;
+    const result = await model.generateContent(request.prompt);
+    const response = await result.response;
+    const text = response.text();
     const responseTime = Date.now() - startTime;
 
-    // Increment request counter
-    requestCount++;
-    console.log(
-      `Groq request successful. Count: ${requestCount}/${DAILY_LIMIT}`
-    );
+    console.log(`Gemini 2.5 Flash request successful. Time: ${responseTime}ms`);
 
     // Log successful response
     logResponse({
@@ -239,7 +191,6 @@ async function checkGemini(request, requestMeta = {}) {
       success: true,
       response: text,
       responseTime,
-      rateLimit: getRateLimitStatus(),
     };
   } catch (error) {
     const responseTime = Date.now() - startTime;
@@ -271,5 +222,4 @@ module.exports = {
   validatePrompt,
   checkGemini,
   mapApiError,
-  getRateLimitStatus,
 };
